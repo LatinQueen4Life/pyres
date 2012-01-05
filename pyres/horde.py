@@ -34,7 +34,7 @@ def setup_logging(namespace='', log_level=logging.INFO, log_file=None):
     return logger
 
 class Minion(multiprocessing.Process):
-    def __init__(self, queues, server, password, log_level=logging.INFO, log_path=None):
+    def __init__(self, queues, server, password, log_level=logging.INFO, log_path=None, blocking_pop=True):
         multiprocessing.Process.__init__(self, name='Minion')
         
         #format = '%(asctime)s %(levelname)s %(filename)s-%(lineno)d: %(message)s'
@@ -53,7 +53,9 @@ class Minion(multiprocessing.Process):
         self.log_level = log_level
         self.log_path = log_path
         self.log_file = None
-        
+        self.blocking_pop = blocking_pop
+        self.sleep_time = 1
+    
     def prune_dead_workers(self):
         pass
     
@@ -142,9 +144,15 @@ class Minion(multiprocessing.Process):
                 break
             job = self.reserve()
             if job:
+                self.sleep_time = 1
                 self.process(job)
             else:
-                time.sleep(interval)
+                if self.blocking_pop:
+                    time.sleep(interval)
+                else:
+                    if self.sleep_time <= 4:
+                        self.sleep_time *= 2
+                    time.sleep(self.sleep_time)
         self.unregister_minion()
     
     def clear_logger(self):
@@ -159,7 +167,7 @@ class Minion(multiprocessing.Process):
         self.logger = setup_logging(namespace, self.log_level, self.log_file)
         #self.clear_logger()
         if isinstance(self.server,basestring):
-            self.resq = ResQ(server=self.server, password=self.password)
+            self.resq = ResQ(server=self.server, password=self.password, blocking_pop=self.blocking_pop)
         elif isinstance(self.server, ResQ):
             self.resq = self.server
         else:
@@ -178,7 +186,7 @@ class Khan(object):
         'REMOVE': '_remove_minion',
         'SHUTDOWN': '_schedule_shutdown'
     }
-    def __init__(self, pool_size=5, queues=[], server='localhost:6379', password=None, logging_level=logging.INFO, log_file=None):
+    def __init__(self, pool_size=5, queues=[], server='localhost:6379', password=None, logging_level=logging.INFO, log_file=None, blocking_pop=True):
         #super(Khan,self).__init__(queues=queues,server=server,password=password)
         self._shutdown = False
         self.pool_size = int(pool_size)
@@ -192,6 +200,7 @@ class Khan(object):
         self.password = password
         self.logging_level = logging_level
         self.log_file = log_file
+        self.blocking_pop = blocking_pop
         
         #self._workers = list()
     
@@ -271,7 +280,7 @@ class Khan(object):
             log_path = os.path.dirname(self.log_file)
         else:
             log_path = None
-        m = Minion(self.queues, self.server, self.password, log_level=self.logging_level, log_path=log_path)
+        m = Minion(self.queues, self.server, self.password, log_level=self.logging_level, log_path=log_path, blocking_pop=self.blocking_pop)
         m.start()
         self._workers[m.pid] = m
         if hasattr(self,'logger'):
@@ -338,8 +347,8 @@ class Khan(object):
         return '%s:%s:%s' % (hostname, self.pid, self.pool_size)
         
     @classmethod
-    def run(cls, pool_size=5, queues=[], server='localhost:6379', logging_level=logging.INFO, log_file=None):
-        worker = cls(pool_size=pool_size, queues=queues, server=server, logging_level=logging_level, log_file=log_file)
+    def run(cls, pool_size=5, queues=[], server='localhost:6379', logging_level=logging.INFO, log_file=None, blocking_pop=True):
+        worker = cls(pool_size=pool_size, queues=queues, server=server, logging_level=logging_level, log_file=log_file, blocking_pop=blocking_pop)
         worker.work()
 
 #if __name__ == "__main__":

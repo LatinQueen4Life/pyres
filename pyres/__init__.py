@@ -77,6 +77,8 @@ class ResQ(object):
 
         ``retry_connection`` -- This keyword is in the signature but is deprecated. Default is "True".
 
+        ``blocking_pop`` -- If "True", uses BLPOP to obtain jobs from Redis with a 10 second timeout. If "False", uses LPOP and returns immediately. Default is "True".
+
 
     Both ``timeout`` and ``retry_connection`` will be removed as the python-redis client
     no longer uses them.
@@ -95,18 +97,22 @@ class ResQ(object):
     attribute on it.
 
     """
-    def __init__(self, server="localhost:6379", password=None):
+    def __init__(self, server="localhost:6379", password=None, blocking_pop=True):
         self.redis = server
         if password:
             self.redis.auth(password)
         self._watched_queues = set()
+        self.blocking_pop = blocking_pop
 
     def push(self, queue, item):
         self.watch_queue(queue)
         self.redis.rpush("resque:queue:%s" % queue, ResQ.encode(item))
 
     def pop(self, queue, timeout=10):
-        ret = self.redis.blpop("resque:queue:%s" % queue, timeout=timeout)
+        if self.blocking_pop:
+            ret = self.redis.blpop("resque:queue:%s" % queue, timeout=timeout)
+        else:
+            ret = self.redis.lpop("resque:queue:%s" % queue)
         if ret:
             if isinstance(ret, tuple):
                 q, ret = ret

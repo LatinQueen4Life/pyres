@@ -24,16 +24,18 @@ class Worker(object):
     
     job_class = Job
     
-    def __init__(self, queues=(), server="localhost:6379", password=None):
+    def __init__(self, queues=(), server="localhost:6379", password=None, blocking_pop=True):
         self.queues = queues
         self.validate_queues()
         self._shutdown = False
         self.child = None
         self.pid = os.getpid()
         self.hostname = os.uname()[1]
+        self.blocking_pop = blocking_pop
+        self.sleep_time = 1
 
         if isinstance(server, basestring):
-            self.resq = ResQ(server=server, password=password)
+            self.resq = ResQ(server=server, password=password, blocking_pop=blocking_pop)
         elif isinstance(server, ResQ):
             self.resq = server
         else:
@@ -137,6 +139,7 @@ class Worker(object):
             if job:
                 logger.debug('picked up job')
                 logger.debug('job details: %s' % job)
+                self.sleep_time = 1
                 self.before_fork(job)
                 self.child = os.fork() 
                 if self.child:
@@ -172,7 +175,10 @@ class Worker(object):
                 #procline @paused ? "Paused" : "Waiting for #{@queues.join(',')}"
                 setproctitle("pyres_worker-%s: Waiting for %s " %
                              (__version__, ','.join(self.queues)))
-                #time.sleep(interval)
+                if not self.blocking_pop:
+                    if self.sleep_time <= 4:
+                        self.sleep_time *= 2
+                    time.sleep(self.sleep_time)
         self.unregister_worker()
 
     def before_fork(self, job):
@@ -274,8 +280,8 @@ class Worker(object):
                                        grep pyres_worker").split("\n"))
 
     @classmethod
-    def run(cls, queues, server="localhost:6379", interval=None):
-        worker = cls(queues=queues, server=server)
+    def run(cls, queues, server="localhost:6379", interval=None, blocking_pop=True):
+        worker = cls(queues=queues, server=server, blocking_pop=blocking_pop)
         if interval is not None:
             worker.work(interval)
         else:
