@@ -181,11 +181,14 @@ class Minion(multiprocessing.Process):
     
 
 class Khan(object):
+    SHUTDOWN_MINION_DELAY = 10
+
     _command_map = {
         'ADD': 'add_minion',
         'REMOVE': '_remove_minion',
         'SHUTDOWN': '_schedule_shutdown'
     }
+
     def __init__(self, pool_size=5, queues=[], server='localhost:6379', password=None, logging_level=logging.INFO, log_file=None, blocking_pop=True):
         #super(Khan,self).__init__(queues=queues,server=server,password=password)
         self._shutdown = False
@@ -286,16 +289,35 @@ class Khan(object):
         if hasattr(self,'logger'):
             self.logger.info('minion added at: %s' % m.pid)
         return m
+
+    def are_minions_alive(self):
+        if len(self._workers) == 0:
+            return False
+        for minion in self._workers.values():
+            if minion.is_alive():
+                return True
+        return False
     
     def _shutdown_minions(self):
         """
         send the SIGNINT signal to each worker in the pool.
         """
         setproctitle('pyres_manager: Waiting on children to shutdown.')
+        self.logger.info('Shutting down minions gracefully')
         for minion in self._workers.values():
             minion.terminate()
-            minion.join()
-    
+        for i in range(0, self.SHUTDOWN_MINION_DELAY):
+            time.sleep(1)
+            if not self.are_minions_alive():
+                break
+        if self.are_minions_alive():
+            self.logger.info('Forcibly terminating remaining children')
+            for minion in self._workers.values():
+                if minion.is_alive():
+                    self.logger.info('Killing minion with pid %d' % minion.pid)
+                    os.kill(minion.pid, signal.SIGKILL)
+                minion.join()
+
     def _remove_minion(self, pid=None):
         #if pid:
         #    m = self._workers.pop(pid)
