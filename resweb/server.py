@@ -29,9 +29,9 @@ def get_cmd_line_options():
     """Return an Options object with the command line options.
     """
     parser = optparse.OptionParser()
-    parser.add_option("--redis", dest="redis", action="store_true",
+    parser.add_option("--redis", dest="redis", action="store",
             help="List of redis servers.")
-    parser.add_option("--port", dest="port", action="store_true",
+    parser.add_option("--port", dest="port", action="store",
             help="Port to listen.")
     (options, args) = parser.parse_args()
     return options, args
