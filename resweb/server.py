@@ -28,9 +28,11 @@ def home():
 
 @app.route('/failed')
 def get_failed():
+    start = int(request.args.get("start", 0))
+    limit = int(request.args.get("limit", 250))
     jobs = []
     for resq in RESQUES:
-        for job in failure.all(resq, 0, 250):
+        for job in failure.all(resq, start, limit):
             backtrace = job['backtrace']
 
             if isinstance(backtrace, list):
@@ -44,7 +46,7 @@ def get_failed():
             item['traceback'] = backtrace
             jobs.append(item)
 
-    return render_template("failures.html", jobs=jobs, dsn=DSN)
+    return render_template("failures.html", jobs=jobs, dsn=DSN, limit=limit)
 
 
 @app.route('/failed/delete_all/')
