@@ -10,6 +10,7 @@ from pyres import failure
 from pyres import ResQ
 
 app = Flask(__name__)
+app.debug = True
 
 RESQUES = []
 DSN = ""
