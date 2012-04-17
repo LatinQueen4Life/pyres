@@ -30,7 +30,7 @@ def home():
 def get_failed():
     jobs = []
     for resq in RESQUES:
-        for job in failure.all(self.resq, 0, 250):
+        for job in failure.all(resq, 0, 250):
             backtrace = job['backtrace']
 
             if isinstance(backtrace, list):
