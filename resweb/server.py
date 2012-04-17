@@ -57,7 +57,7 @@ def delete_all_failed(request):
     raise Redirect('/failed/')
 
 
-@app.route('/queues/(?P<queue_id>\w.+)')
+@app.route('/queues/<queue_id>')
 def get_items_in_queue(queue_id):
     start = int(request.args.get("start", 0))
     limit = int(request.args.get("limit", 250))
