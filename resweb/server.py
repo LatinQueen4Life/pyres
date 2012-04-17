@@ -77,8 +77,8 @@ def get_stats():
     queue_stats['queues'] = RESQUES[0].redis.scard("resque:queues")
     queue_stats["servers"] = dsn
     for resq in RESQUES:
-        queue_stats["resque:stat:processed"] += resq.
-        queue_stats["resque:stat:failed"] += resq.
+        queue_stats["processed"] += resq.redis.get("resque:stat:processed")
+        queue_stats["failed"] += resq.redis.get("resque:stat:failed")
     return render_template("stats.html", data=queue_stats, dsn=DSN)
 
 def get_cmd_line_options():
