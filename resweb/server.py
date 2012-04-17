@@ -25,6 +25,34 @@ def home():
     return render_template("index.html", queue_stats=queue_stats, dsn=DSN)
 
 
+@app.route('/failed')
+def get_failed():
+    jobs = []
+    for resq in RESQUES:
+        for job in failure.all(self.resq, 0, 250):
+            backtrace = job['backtrace']
+
+            if isinstance(backtrace, list):
+                backtrace = '\n'.join(backtrace)
+
+            item = job
+            item['failed_at'] = job['failed_at']
+            item['worker_url'] = '/workers/%s/' % job['worker']
+            item['payload_args'] = str(job['payload']['args'])[:1024]
+            item['payload_class'] = job['payload']['class']
+            item['traceback'] = backtrace
+            jobs.append(item)
+
+    return render_template("failures.html", jobs=jobs, dsn=DSN)
+
+
+@app.route('/failed/delete_all/')
+def delete_all_failed(request):
+    for resq in RESQUES:
+        resq.redis.rename('resque:failed','resque:failed-staging')
+        resq.redis.delete('resque:failed-staging')
+    raise Redirect('/failed/')
+
 def get_cmd_line_options():
     """Return an Options object with the command line options.
     """

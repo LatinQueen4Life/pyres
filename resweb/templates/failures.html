@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block header %}
+<script type="text/javascript">
+$(document).ready(function(){
+    $('.backtrace').click(function() {
+        $(this).next().toggle();
+        return false;
+    });
+});
+function retry_all(){
+    alert("Haa you really thought I was gonna retry all tasks for you.
+           Go run it yourself. :)   python tools/pyres/retry_tasks.py");
+}
+function delete_all(){
+    if(confirm('Are you sure you want to delete all?')){
+        window.location.href = '/failed/delete_all';
+    }
+
+}
+</script>
+{% endblock %}
+{% block content %}
+  <h1 class='wi'>Queues</h1>
+  <p class='intro'>The list below contains all the registered queues with the number of jobs currently in the queue. Select a queue from above to view all jobs currently pending on the queue.</p>
+  <table class='queues'>
+    <tr>
+      <th>Name</th>
+      <th>Jobs</th>
+    </tr>
+    {% for qname, size in queue_stats.iteritems() %}
+    <tr>
+      <td class='queue {{qname}}'><a class="queue" href="/queues/{{qname}}">{{qname}}</a></td>
+      <td class='size'>{{size}}</td>
+    </tr>
+    {% endfor %}
+  </table>
+{% endblock %}
