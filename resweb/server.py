@@ -32,7 +32,7 @@ def get_failed():
     limit = int(request.args.get("limit", 250))
     jobs = []
     for resq in RESQUES:
-        for job in failure.all(resq, start, limit):
+        for job in failure.all(resq, start, start+limit):
             backtrace = job['backtrace']
 
             if isinstance(backtrace, list):
@@ -49,12 +49,28 @@ def get_failed():
     return render_template("failures.html", jobs=jobs, dsn=DSN, limit=limit)
 
 
-@app.route('/failed/delete_all/')
+@app.route('/failed/delete_all')
 def delete_all_failed(request):
     for resq in RESQUES:
         resq.redis.rename('resque:failed','resque:failed-staging')
         resq.redis.delete('resque:failed-staging')
     raise Redirect('/failed/')
+
+
+@app.route('/queues/(?P<queue_id>\w.+)')
+def get_items_in_queue(queue_id):
+    start = int(request.args.get("start", 0))
+    limit = int(request.args.get("limit", 250))
+    jobs = []
+    for resq in RESQUES:
+        for job in resq.peek(queue_id, start, start+limit):
+            jobs.append({
+                'class':job['class'],
+                'args': str(job['args'])
+            })
+    return render_template("queues.html", queue=queue_id, jobs=jobs, dsn=DSN, 
+                           start=start, end=start+limit)
+
 
 def get_cmd_line_options():
     """Return an Options object with the command line options.
