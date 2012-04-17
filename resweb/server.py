@@ -46,7 +46,7 @@ def main():
         for host_port in dsn:
             host, port = host_port.split(":")
             global RESQUES
-            RESQUES.append(ResQ(redis.Redis(host=host, port=port)))
+            RESQUES.append(ResQ(redis.Redis(host=host, port=int(port))))
 
     if opts.port:
         port = int(opts.port)
