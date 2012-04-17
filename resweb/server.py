@@ -85,7 +85,7 @@ def get_cmd_line_options():
     """Return an Options object with the command line options.
     """
     parser = optparse.OptionParser()
-    parser.add_option("--redis", dest="redis", action="store",
+    parser.add_option("--dsn", dest="dsn", action="store",
             help="List of redis servers.")
     parser.add_option("--port", dest="port", action="store",
             help="Port to listen.")
@@ -95,10 +95,10 @@ def get_cmd_line_options():
 def main():
     opts, args = get_cmd_line_options()
     port = 8000
-    if opts.redis:
+    if opts.dsn:
         global DSN
-        DSN = opts.redis
-        dsn = opts.redis.split(",")
+        DSN = opts.dsn
+        dsn = opts.dsn.split(",")
         for host_port in dsn:
             host, port = host_port.split(":")
             global RESQUES
