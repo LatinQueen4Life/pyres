@@ -81,34 +81,19 @@ def get_stats():
         queue_stats["failed"] += int(resq.redis.get("resque:stat:failed"))
     return render_template("stats.html", data=queue_stats, dsn=DSN)
 
-def get_cmd_line_options():
-    """Return an Options object with the command line options.
-    """
-    parser = optparse.OptionParser()
-    parser.add_option("--dsn", dest="dsn", action="store",
-            help="List of redis servers.")
-    parser.add_option("--port", dest="port", action="store",
-            help="Port to listen.")
-    (options, args) = parser.parse_args()
-    return options, args
+def main(host, port, dsn):
+    if not dsn:
+        raise Exception("Please enter redis server to poll on")
+    port = int(port)
+    global DSN
+    DSN = dsn
+    dsn = dsn.split(",")
+    for host_port in dsn:
+        rhost, rport = host_port.split(":")
+        global RESQUES
+        RESQUES.append(ResQ(redis.Redis(host=rhost, port=int(rport))))
 
-def main():
-    opts, args = get_cmd_line_options()
-    port = 8000
-    if opts.dsn:
-        global DSN
-        DSN = opts.dsn
-        dsn = opts.dsn.split(",")
-        for host_port in dsn:
-            host, port = host_port.split(":")
-            global RESQUES
-            RESQUES.append(ResQ(redis.Redis(host=host, port=int(port))))
-
-    if opts.port:
-        port = int(opts.port)
     print "server up on %d" %port
-    pywsgi.WSGIServer(("0.0.0.0", port), app).serve_forever()
+    pywsgi.WSGIServer((host, port), app).serve_forever()
 
-if __name__ == "__main__":
-    main()
 

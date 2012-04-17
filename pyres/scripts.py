@@ -2,8 +2,7 @@ import logging
 
 from optparse import OptionParser
 
-from itty import run_itty
-
+from resweb import server
 from pyres.horde import Khan
 from pyres import setup_logging
 from pyres.scheduler import Scheduler
@@ -57,7 +56,7 @@ def pyres_web():
     parser = OptionParser(usage)
     parser.add_option("--host",
                     dest="host",
-                    default="localhost",
+                    default="0.0.0.0",
                     metavar="HOST")
     parser.add_option("--port",
                     dest="port",
@@ -72,10 +71,7 @@ def pyres_web():
                       default='wsgiref')
     (options,args) = parser.parse_args()
 
-    if options.dsn:
-        from pyres import ResQ
-        resweb_server.HOST = ResQ(options.dsn)
-    run_itty(host=options.host, port=options.port, server=options.server)
+    server.main(options.host, options.port, options.dsn)
 
 
 def pyres_worker():
