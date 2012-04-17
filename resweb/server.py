@@ -71,6 +71,15 @@ def get_items_in_queue(queue_id):
     return render_template("queues.html", queue=queue_id, jobs=jobs, dsn=DSN, 
                            start=start, end=start+limit)
 
+@app.route('/stats')
+def get_stats():
+    queue_stats = defaultdict(int)
+    queue_stats['queues'] = RESQUES[0].redis.scard("resque:queues")
+    queue_stats["servers"] = dsn
+    for resq in RESQUES:
+        queue_stats["resque:stat:processed"] += resq.
+        queue_stats["resque:stat:failed"] += resq.
+    return render_template("stats.html", data=queue_stats, dsn=DSN)
 
 def get_cmd_line_options():
     """Return an Options object with the command line options.
