@@ -75,7 +75,7 @@ def get_items_in_queue(queue_id):
 def get_stats():
     queue_stats = defaultdict(int)
     queue_stats['queues'] = RESQUES[0].redis.scard("resque:queues")
-    queue_stats["servers"] = dsn
+    queue_stats["servers"] = DSN
     for resq in RESQUES:
         queue_stats["processed"] += resq.redis.get("resque:stat:processed")
         queue_stats["failed"] += resq.redis.get("resque:stat:failed")
