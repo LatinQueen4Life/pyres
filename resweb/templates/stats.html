@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Stats</h1>
+  <table class='stats'>
+    {% for qname, size in data.iteritems() %}
+    <tr>
+      <th>{{qname}}</th>
+      <td>{{size}}</td>
+    </tr>
+    {% endfor %}
+  </table>
+{% endblock %}
