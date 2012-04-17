@@ -1,123 +1,58 @@
-import os
-from itty import Redirect, get, post, serve_static_file, run_itty
-from pyres import ResQ
+#!/usr/bin/env python
+
+import optparse
+from collections import defaultdict
+
+import redis
+from flask import Flask, request, render_template
+from gevent import pywsgi
 from pyres import failure
-from views import (
-    Overview,
-    Queues,
-    Queue,
-    Workers,
-    Working,
-    Failed,
-    Stats,
-    Stat,
-    Worker,
-    Delayed,
-    DelayedTimestamp
-)
-from base64 import b64decode
+from pyres import ResQ
 
-HOST = ResQ("localhost:6379")
-MY_ROOT = os.path.join(os.path.dirname(__file__), 'media')
-#resq = ResQ(HOST)
+app = Flask(__name__)
 
-@get("/")
-def index(request):
-    return Overview(HOST).render().encode('utf-8')
+RESQUES = []
+DSN = ""
 
-@get("/working/")
-def working(request):
-    return Working(HOST).render().encode('utf-8')
-
-@get("/queues/")
-def queues(request):
-    return Queues(HOST).render().encode('utf-8')
-
-@get('/queues/(?P<queue_id>\w.+)/')
-def queue(request, queue_id):
-    start = int(request.GET.get('start',0))
-    return Queue(HOST, queue_id, start).render().encode('utf-8')
-
-@get('/failed/')
-def failed(request):
-    start = request.GET.get('start',0)
-    start = int(start)
-    return Failed(HOST, start).render().encode('utf-8')
-
-@post('/failed/retry/')
-def failed_retry(request):
-    failed_job = request.POST['failed_job']
-    job = b64decode(failed_job)
-    decoded = ResQ.decode(job)
-    failure.retry(HOST, decoded['queue'], job)
-    raise Redirect('/failed/')
-
-@post('/failed/delete/')
-def failed_delete(request):
-    failed_job = request.POST['failed_job']
-    job = b64decode(failed_job)
-    failure.delete(HOST, job)
-    raise Redirect('/failed/')
-
-@get('/failed/delete_all/')
-def delete_all_failed(request):
-     #move resque:failed to resque:failed-staging
-     HOST.redis.rename('resque:failed','resque:failed-staging')
-     HOST.redis.delete('resque:failed-staging')
-     raise Redirect('/failed/')
+@app.route('/')
+def home():
+    queue_stats = defaultdict(int)
+    queues = RESQUES[0].queues()
+    for resq in RESQUES:
+        for q in queues:
+            queue_stats[q] += resq.size(q)
+        queue_stats["failed"] += failure.count(resq)
+    return render_template("index.html", queue_stats=queue_stats, dsn=DSN)
 
 
-@get('/failed/retry_all')
-def retry_failed(request, number=5000):
-    failures = failure.all(HOST, 0, number)
-    for f in failures:
-        j = b64decode(f['redis_value'])
-        failure.retry(HOST, f['queue'], j)
-    raise Redirect('/failed/')
+def get_cmd_line_options():
+    """Return an Options object with the command line options.
+    """
+    parser = optparse.OptionParser()
+    parser.add_option("--redis", dest="redis", action="store_true",
+            help="List of redis servers.")
+    parser.add_option("--port", dest="port", action="store_true",
+            help="Port to listen.")
+    (options, args) = parser.parse_args()
+    return options, args
 
-@get('/workers/(?P<worker_id>\w.+)/')
-def worker(request, worker_id):
-    return Worker(HOST, worker_id).render().encode('utf-8')
+def main():
+    opts, args = get_cmd_line_options()
+    port = 8000
+    if opts.redis:
+        global DSN
+        DSN = opts.redis
+        dsn = opts.redis.split(",")
+        for host_port in dsn:
+            host, port = host_port.split(":")
+            global RESQUES
+            RESQUES.append(ResQ(redis.Redis(host=host, port=port)))
 
-@get('/workers/')
-def workers(request):
-    return Workers(HOST).render().encode('utf-8')
-
-@get('/stats/')
-def stats(request):
-    raise Redirect('/stats/resque/')
-
-@get('/stats/(?P<key>\w+)/')
-def stats(request, key):
-    return Stats(HOST, key).render().encode('utf-8')
-
-@get('/stat/(?P<stat_id>\w.+)')
-def stat(request, stat_id):
-    return Stat(HOST, stat_id).render().encode('utf-8')
-
-@get('/delayed/')
-def delayed(request):
-    start = request.GET.get('start',0)
-    start = int(start)
-    return Delayed(HOST, start).render().encode('utf-8')
-
-@get('/delayed/(?P<timestamp>\w.+)')
-def delayed_timestamp(request, timestamp):
-    start = request.GET.get('start',0)
-    start = int(start)
-    return DelayedTimestamp(HOST, timestamp, start).render().encode('utf-8')
-
-@get('/media/(?P<filename>.+)')
-def my_media(request, filename):
-    #return serve_static_file(request, filename)
-    #my_media.content_type = content_type(filename)
-
-    return serve_static_file(request, filename, root=MY_ROOT)
-    #output = static_file(filename, root=MY_ROOT)
-    #return Response(output, content_type=content_type(filename))
-    #return static_file(request, filename=filename, root=my_root)
-
-
+    if opts.port:
+        port = int(opts.port)
+    print "server up on %d" %port
+    pywsgi.WSGIServer(("0.0.0.0", port), app).serve_forever()
 
 if __name__ == "__main__":
-    run_itty()
+    main()
+
