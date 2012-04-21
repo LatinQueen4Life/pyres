@@ -4,7 +4,7 @@ import optparse
 from collections import defaultdict
 
 import redis
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect
 from gevent import pywsgi
 from pyres import failure
 from pyres import ResQ
@@ -59,6 +59,8 @@ def delete_all_failed(request):
 
 @app.route('/queues/<queue_id>')
 def get_items_in_queue(queue_id):
+    if queue_id == "failed":
+        return redirect("/failed")
     start = int(request.args.get("start", 0))
     limit = int(request.args.get("limit", 250))
     jobs = []
