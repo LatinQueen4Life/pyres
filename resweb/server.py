@@ -40,7 +40,7 @@ def get_failed():
 
             item = job
             item['failed_at'] = job['failed_at']
-            item['worker_url'] = '/workers/%s/' % job['worker']
+            item['worker'] = job['worker']
             item['payload_args'] = str(job['payload']['args'])[:1024]
             item['payload_class'] = job['payload']['class']
             item['traceback'] = backtrace
