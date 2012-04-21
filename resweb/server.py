@@ -50,7 +50,7 @@ def get_failed():
 
 
 @app.route('/failed/delete_all')
-def delete_all_failed(request):
+def delete_all_failed():
     for resq in RESQUES:
         resq.redis.rename('resque:failed','resque:failed-staging')
         resq.redis.delete('resque:failed-staging')
