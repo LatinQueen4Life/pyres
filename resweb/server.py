@@ -54,7 +54,7 @@ def delete_all_failed():
     for resq in RESQUES:
         resq.redis.rename('resque:failed','resque:failed-staging')
         resq.redis.delete('resque:failed-staging')
-    raise redirect('/failed/')
+    raise redirect('/failed')
 
 
 @app.route('/queues/<queue_id>')
