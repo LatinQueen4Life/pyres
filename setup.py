@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version='1.1pinterest1'
+version='1.1pinterest3'
 
 setup(
     name='pyres',

@@ -1,4 +1,4 @@
-__version__ = '1.1pinterest1'
+__version__ = '1.1pinterest3'
 
 from redis import Redis
 import pyres.json_parser as json
