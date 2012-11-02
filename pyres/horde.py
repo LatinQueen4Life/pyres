@@ -303,7 +303,8 @@ class Khan(object):
         send the SIGNINT signal to each worker in the pool.
         """
         setproctitle('pyres_manager: Waiting on children to shutdown.')
-        self.logger.info('Shutting down minions gracefully')
+        if hasattr(self, "logger"):
+            self.logger.info('Shutting down minions gracefully')
         for minion in self._workers.values():
             minion.terminate()
         for i in range(0, self.SHUTDOWN_MINION_DELAY):
@@ -311,10 +312,12 @@ class Khan(object):
             if not self.are_minions_alive():
                 break
         if self.are_minions_alive():
-            self.logger.info('Forcibly terminating remaining children')
+            if hasattr(self, "logger"):
+                self.logger.info('Forcibly terminating remaining children')
             for minion in self._workers.values():
                 if minion.is_alive():
-                    self.logger.info('Killing minion with pid %d' % minion.pid)
+                    if hasattr(self, "logger"):
+                        self.logger.info('Killing minion with pid %d' % minion.pid)
                     os.kill(minion.pid, signal.SIGKILL)
                 minion.join()
 
