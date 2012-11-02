@@ -228,7 +228,7 @@ class Worker(object):
             logger.debug('checking queue %s' % q)
             job = self.job_class.reserve(q, self.resq, self.__str__(), timeout=timeout)
             if job:
-                logger.info('Found job on %s' % q)
+                logger.info('Found job on %s: %s' % (q, job))
                 return job
 
     def working_on(self, job):
