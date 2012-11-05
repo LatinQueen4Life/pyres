@@ -322,9 +322,14 @@ class Khan(object):
                 minion.join()
 
     def _remove_minion(self, pid=None):
-        #if pid:
-        #    m = self._workers.pop(pid)
-        pid, m = self._workers.popitem(False)
+        if pid:
+            try:
+                m = self._workers.pop(pid)
+            except KeyError:
+                self.logger.info("Minion %d cannot be found.", pid)
+                return
+        else:
+            pid, m = self._workers.popitem(False)
         m.terminate()
         self.resq.redis.srem('resque:khans',str(self))
         self.pool_size -= 1
@@ -343,8 +348,21 @@ class Khan(object):
 
     def _setup_logging(self):
         self.logger = setup_logging('khan', self.logging_level, self.log_file)
+
+    def _relauch_dead_minion(self):
+        for pid in self._workers.keys():
+            try:
+                m = self._workers[pid]
+                if not m.is_alive():
+                    self.logger.info("Detected dead minion %d and a "
+                                     "replacement to be launched.", pid)
+                    self._remove_minion(pid=pid)
+                    self._add_minion()
+            except Exception:
+                self.logger.exception("Exception when checking minion: %d",
+                                      pid)
     
-    def work(self, interval=2):
+    def work(self, interval=5):
         setproctitle('pyres_manager: Starting')
         self.startup()
         self.setup_minions()
@@ -364,6 +382,9 @@ class Khan(object):
                 break
             #get job
             else:
+                # Check whether the minions are still alive.
+                # If not, relauch them.
+                self._relauch_dead_minion()
                 time.sleep(interval)
         self.unregister_khan()
     
