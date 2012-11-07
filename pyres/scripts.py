@@ -20,6 +20,10 @@ def pyres_manager():
     parser.add_option("--pool", type="int", dest="pool_size", default=1, help="Number of minions to spawn under the manager.")
     parser.add_option('-f', dest='logfile', help='If present, a logfile will be used.')
     parser.add_option("-n", "--nonblocking-pop", dest="blocking_pop", action="store_false", default=True, help="If absent, Pyres will use the Redis blocking pop (BLPOP) to obtain jobs from the queue(s). If present, Redis will use a non-blocking pop (LPOP) and will sleep for up to 8 seconds if no jobs are available.")
+    parser.add_option(
+        "-rg", "--reinit-gevent", dest="reinit_gevent",
+        action="store_true", default=False,
+        help="If present, reinitialize gevent in minions after fork." )
     (options,args) = parser.parse_args()
 
     if len(args) != 1:
@@ -31,7 +35,10 @@ def pyres_manager():
 
     queues = args[0].split(',')
     server = '%s:%s' % (options.host,options.port)
-    Khan.run(pool_size=options.pool_size, queues=queues, server=server, logging_level=log_level, log_file=options.logfile, blocking_pop=options.blocking_pop)
+    Khan.run(pool_size=options.pool_size, queues=queues, server=server,
+             logging_level=log_level, log_file=options.logfile,
+             blocking_pop=options.blocking_pop,
+             reinit_gevent=options.reinit_gevent)
 
 
 def pyres_scheduler():
