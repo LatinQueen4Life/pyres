@@ -24,6 +24,9 @@ def pyres_manager():
         "-r", "--reinit-gevent", dest="reinit_gevent",
         action="store_true", default=False,
         help="If present, reinitialize gevent in minions after fork." )
+    parser.add_option("-m", "--monkey-patch", dest="monkey_patch",
+                      action="store_true", default=False,
+                      help="If present, also turn on gevent monkey patch.")
     (options,args) = parser.parse_args()
 
     if len(args) != 1:
@@ -38,7 +41,8 @@ def pyres_manager():
     Khan.run(pool_size=options.pool_size, queues=queues, server=server,
              logging_level=log_level, log_file=options.logfile,
              blocking_pop=options.blocking_pop,
-             reinit_gevent=options.reinit_gevent)
+             reinit_gevent=options.reinit_gevent,
+             monkey_patch=options.monkey_patch)
 
 
 def pyres_scheduler():
