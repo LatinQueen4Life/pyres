@@ -35,7 +35,8 @@ def setup_logging(namespace='', log_level=logging.INFO, log_file=None):
 
 class Minion(multiprocessing.Process):
     def __init__(self, queues, server, password, log_level=logging.INFO,
-                 log_path=None, blocking_pop=True, reinit_gevent=False):
+                 log_path=None, blocking_pop=True, reinit_gevent=False,
+                 monkey_patch=False):
         multiprocessing.Process.__init__(self, name='Minion')
         
         #format = '%(asctime)s %(levelname)s %(filename)s-%(lineno)d: %(message)s'
@@ -56,6 +57,7 @@ class Minion(multiprocessing.Process):
         self.log_file = None
         self.blocking_pop = blocking_pop
         self.reinit_gevent = reinit_gevent
+        self.monkey_patch = monkey_patch
         self.sleep_time = 1
     
     def prune_dead_workers(self):
@@ -171,6 +173,9 @@ class Minion(multiprocessing.Process):
             try:
                 gevent = __import__("gevent")
                 gevent.core.reinit()
+                if self.monkey_patch:
+                    __import__("gevent.monkey")
+                    gevent.monkey.patch_all()
             except Exception:
                 self.logger.exception("Exception when reinitialize gevent.")
         #self.clear_logger()
@@ -199,7 +204,7 @@ class Khan(object):
 
     def __init__(self, pool_size=5, queues=[], server='localhost:6379',
                  password=None, logging_level=logging.INFO, log_file=None,
-                 blocking_pop=True, reinit_gevent=False):
+                 blocking_pop=True, reinit_gevent=False, monkey_patch=False):
         #super(Khan,self).__init__(queues=queues,server=server,password=password)
         self._shutdown = False
         self.pool_size = int(pool_size)
@@ -214,7 +219,8 @@ class Khan(object):
         self.logging_level = logging_level
         self.log_file = log_file
         self.blocking_pop = blocking_pop
-        self.reinit_gevent=reinit_gevent
+        self.reinit_gevent = reinit_gevent
+        self.monkey_patch = monkey_patch
         
         #self._workers = list()
     
@@ -297,7 +303,8 @@ class Khan(object):
         m = Minion(self.queues, self.server, self.password,
                    log_level=self.logging_level, log_path=log_path,
                    blocking_pop=self.blocking_pop,
-                   reinit_gevent=self.reinit_gevent)
+                   reinit_gevent=self.reinit_gevent,
+                   monkey_patch=self.monkey_patch)
         m.start()
         self._workers[m.pid] = m
         if hasattr(self,'logger'):
@@ -409,10 +416,11 @@ class Khan(object):
     @classmethod
     def run(cls, pool_size=5, queues=[], server='localhost:6379',
             logging_level=logging.INFO, log_file=None, blocking_pop=True,
-            reinit_gevent=False):
+            reinit_gevent=False, monkey_patch=False):
         worker = cls(pool_size=pool_size, queues=queues, server=server,
                      logging_level=logging_level, log_file=log_file,
-                     blocking_pop=blocking_pop, reinit_gevent=reinit_gevent)
+                     blocking_pop=blocking_pop, reinit_gevent=reinit_gevent,
+                     monkey_patch=monkey_patch)
         worker.work()
 
 #if __name__ == "__main__":
