@@ -136,6 +136,14 @@ class Minion(multiprocessing.Process):
     def unregister_minion(self):
         self.resq.redis.srem('resque:minions',str(self))
         self.started = None
+
+    def __sleep(self, interval):
+        # If we reinit gevent, we should use gevent.sleep between reservation.
+        if self.reinit_gevent:
+            gevent = __import__("gevent")
+            gevent.sleep(interval)
+        else:
+            time.sleep(interval)
     
     def work(self, interval=5):
         
@@ -152,11 +160,11 @@ class Minion(multiprocessing.Process):
                 self.process(job)
             else:
                 if self.blocking_pop:
-                    time.sleep(interval)
+                    self.__sleep(interval)
                 else:
                     if self.sleep_time <= 4:
                         self.sleep_time *= 2
-                    time.sleep(self.sleep_time)
+                    self.__sleep(self.sleep_time)
         self.unregister_minion()
     
     def clear_logger(self):
